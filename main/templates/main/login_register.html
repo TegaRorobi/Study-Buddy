@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        {% if action == 'login' %}
+            <form action="." method="POST">
+                {% csrf_token %}
+
+                <label for="username">Username:</label>
+                <input type="text" name="username" placeholder="Enter Username...">
+
+                <label for="password">Password:</label>
+                <input type="password" name="password" placeholder="Enter Password...">
+
+                <input type="submit" value = 'Login'>
+
+                <p>Don't have an account? create one <a href="{% url 'main:register' %}"><i>here</i></a></p>
+            </form>
+        {% elif action == 'register' %}
+           <div class="col-8">
+                {{form|crispy}}
+                <input type="submit" value = 'Register'>
+
+                <p>Already signed up? login <a href="{% url 'main:login' %}"><i>here</i></a></p>
+           </div>
+        {% endif %}
+    </div>
+
+{% endblock %}
+

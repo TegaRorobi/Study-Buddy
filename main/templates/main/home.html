@@ -17,23 +17,26 @@
             <a href="{% url 'main:home' %}">All</a>
         </div>
         {% for topic in topics %}
-        <div>
-            <a href="{% url 'main:home' %}?q={{topic.name}}">{{topic.name}}</a>
-        </div>
+            <div>
+                <a href="{% url 'main:home' %}?q={{topic.name}}">{{topic.name}}</a>
+            </div>
         {% endfor %}
 
     </div>
     <div>
-        <h1>This is the home page</h1>
+        <h5>{{room_count}} rooms available</h5>
         <h3><a href="{% url 'main:create-room' %}"><button>+Create a new room</button></a></h3>
         <hr>
         {% for room in rooms %}
-            <a href='{% url "main:update-room" room.id %}'>
-                <button>Edit</button>
-            </a>
-            <a href="{% url 'main:delete-room' room.id %}">
-                <button>Delete</button>
-            </a> 
+            {% if request.user == room.host %}
+                <a href='{% url "main:update-room" room.id %}'>
+                    <button>Edit</button>
+                </a>
+                <a href="{% url 'main:delete-room' room.id %}">
+                    <button>Delete</button>
+                </a> 
+            {% endif %}
+            
             <span>@{{room.host.username}}</span>
             <h3>{{room.id}} ~ {{room.name}}</h3> 
             
