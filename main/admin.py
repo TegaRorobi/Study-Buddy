@@ -12,3 +12,8 @@ class RoomAdmin(admin.ModelAdmin):
 class TopicAdmin(admin.ModelAdmin):
     model = Topic
     list_display = ['name', 'created']
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    model = Message
+    list_display = ['user', 'body', 'created', 'updated']

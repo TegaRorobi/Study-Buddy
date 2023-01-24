@@ -9,6 +9,7 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name = 'register'),
     path('home/', HomeView.as_view(), name='home'), 
     path('contact/', contact, name='contact'),
+    path('room/<str:room_name>/', RoomView.as_view(), name='view-room'),
     path('create-room/', createRoom.as_view(), name = 'create-room'),
     path('update-room/<int:pk>/', updateRoom.as_view(), name = 'update-room'),
     path('delete-room/<int:pk>/', deleteRoom.as_view(), name = 'delete-room'),

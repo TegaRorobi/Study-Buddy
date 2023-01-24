@@ -38,7 +38,7 @@
             {% endif %}
             
             <span>@{{room.host.username}}</span>
-            <h3>{{room.id}} ~ {{room.name}}</h3> 
+            <h3><a href="{% url 'main:view-room' room.name %}">{{room.id}} ~ {{room.name}}</a></h3> 
             
             <small>{{room.topic.name}}</small>
             <hr>

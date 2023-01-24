@@ -28,7 +28,7 @@ class LoginView(View):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            messages.success(request, 'You have logged in successfully')
+            messages.success(request, f'You have logged in successfully as {request.user}')
         else:
             messages.error(request, 'username or pasword does not exist')
         # print(request.META['HTTP_REFERER'])
@@ -53,6 +53,11 @@ class RegisterView(View):
         else:
             messages.error(request, 'An error occurred during registration')
 
+class RoomView(View):
+    def get(self, request, room_name):
+        room = Room.objects.get(name=room_name)
+        messages = room.messages.all()
+        return render(request, 'main/room.html', {'room':room, 'messages':messages})
 class HomeView(View):
     template_name = 'main/home.html'
     def get(self, request):
