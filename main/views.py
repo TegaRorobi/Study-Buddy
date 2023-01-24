@@ -18,7 +18,7 @@ class LoginView(View):
             return redirect(reverse('main:home'))
         return render(request, 'main/login_register.html', {'action':'login'})
     def post(self, request):
-        username = request.POST.get('username').lower()
+        username = request.POST.get('username')
         password = request.POST.get('password')
         try:
             user = User.objects.get(username = username)
@@ -40,13 +40,13 @@ class LogoutView(View):
         return redirect(reverse('main:home'))
 
 class RegisterView(View):
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         return render(request, 'main/login_register.html', {'action':'register', 'form':UserCreationForm()})
     def post(self, request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.username = user.username.lower()
+            # user.username = user.username.lower()
             user.save()
             login(request, user)
             return redirect(reverse('main:home'))
