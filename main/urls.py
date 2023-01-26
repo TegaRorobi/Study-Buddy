@@ -13,5 +13,7 @@ urlpatterns = [
     path('create-room/', createRoom.as_view(), name = 'create-room'),
     path('update-room/<int:pk>/', updateRoom.as_view(), name = 'update-room'),
     path('delete-room/<int:pk>/', deleteRoom.as_view(), name = 'delete-room'),
+    path('delete-message/<int:pk>/', deleteMessage.as_view(), name = 'delete-message'),
+    path('profile/<str:username>/', UserProfile.as_view(), name = 'user-profile'), 
 ]
 

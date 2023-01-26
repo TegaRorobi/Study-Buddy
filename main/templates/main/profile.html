@@ -3,27 +3,26 @@
 {% block content %}
 
 <style>
-    .home-container{
-        display: grid;
-        grid-template-columns:4fr 12fr 5fr;
+    .profile-container{
+        display:grid;
+        grid-template-columns: 3fr 12fr 4fr;
     }
 </style>
 
-<div class='home-container'>
+<h1 class="text-center mb-4">{{user.username}}</h1>
+
+<div class="profile-container">
     <div>
         {% include 'main/topics_component.html' %}
     </div>
 
     <div>
-        <h5>{{room_count}} rooms available</h5>
-        <h3><a href="{% url 'main:create-room' %}"><button>+Create a new room</button></a></h3>
-        <hr>
         {% include 'main/feed_component.html' %}
     </div>
 
     <div>
         {% include 'main/activity_component.html' %}
     </div>
-    
 </div>
+
 {% endblock %}

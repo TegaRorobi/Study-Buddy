@@ -1,17 +1,53 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>{{room.name}}</h2>
-    <p>{{room.description}}</p>
-    <div class="comment-wrapper">
-        <h4>Conversation</h4>
-        <hr>
-        {% for message in messages %}
-            <div>
-                <small>@{{message.user}}   {{message.updated|timesince}} ago</small>
-                <p>{{message.body}}</p>
+
+<style>
+    .room-container{
+        display:grid;
+        grid-template-columns:3fr 1fr;
+    }
+</style>
+    <div class="room-container">
+        <div>
+            <h2>{{room.name}}</h2>
+            <p>{{room.description}}</p>
+            <div class="comment-wrapper">
+                <h4>Conversation</h4>
                 <hr>
+                {% for message in room_messages %}
+                    <div>
+                        {% if request.user == room.host or request.user == message.user %}
+                            <a href="{% url 'main:delete-message' message.id %}">Delete</a>
+                        {% endif %}
+                        <small>@{{message.user}}   {{message.updated|timesince}} ago</small>
+                        <p>{{message.body}}</p>
+                        <hr>
+                        
+                    </div>
+                {% endfor %}
+                
+                
             </div>
-        {% endfor %}
+            {% if request.user.is_authenticated %}
+                <div class="comment-form">
+                    <form action="." method="POST">
+                        {% csrf_token %}
+                        <input type="text" name="body" placeholder="Write your message here...">
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+        <div>
+            <h3>Participants</h3>
+            <hr>
+            {% for user in participants %}
+                <div>
+                    <p>@{{user.username}}</p>
+                </div>
+            
+            {% endfor %}
+        </div>
     </div>
+    
 {% endblock %}

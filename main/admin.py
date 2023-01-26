@@ -1,6 +1,5 @@
 from django.contrib import admin
 from .models import *
-
 # Register your models here.
 
 @admin.register(Room)
@@ -16,4 +15,5 @@ class TopicAdmin(admin.ModelAdmin):
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
     model = Message
-    list_display = ['user', 'body', 'created', 'updated']
+    list_display = ['user', 'room', 'created', 'updated']
+

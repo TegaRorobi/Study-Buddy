@@ -56,8 +56,20 @@ class RegisterView(View):
 class RoomView(View):
     def get(self, request, room_name):
         room = Room.objects.get(name=room_name)
-        messages = room.messages.all()
-        return render(request, 'main/room.html', {'room':room, 'messages':messages})
+        room_messages = room.messages.all()
+        participants = room.participants.all()
+        return render(request, 'main/room.html', {'room':room, 'room_messages':room_messages, 'participants':participants})
+    def post(self, request, room_name):
+        room = Room.objects.get(name=room_name)
+        message = Message.objects.create(
+            user=request.user,
+            room = room,
+            body = request.POST.get('body'),
+        )
+        room.participants.add(request.user)
+        messages.success(request, 'Your message has been posted successfully!')
+        return self.get(request, room_name=room.name)
+
 class HomeView(View):
     template_name = 'main/home.html'
     def get(self, request):
@@ -65,16 +77,27 @@ class HomeView(View):
         rooms = Room.objects.filter(
             Q(topic__name__icontains = q) | 
             Q(name__icontains = q) |
-            Q(description__icontains = q) |
-            Q(host__username__icontains = q)
+            Q(host__username__icontains = q) |
+            Q(description__icontains = q)
+
         )
-        context = {'rooms': rooms, 'room_count':rooms.count(), 'topics':Topic.objects.all()}
+        room_messages = Message.objects.filter(room__in=rooms)[:5]
+
+        context = {'rooms': rooms, 'activity':room_messages, 'room_count':rooms.count(), 'topics':Topic.objects.all()}
         return render(request, 'main/home.html', context)
 
 
 def contact(request):
     return render(request, 'main/contact.html', {})
 
+
+class UserProfile(View):
+    def get(self, request, username):
+        user = User.objects.get(username=username)
+        rooms = user.owned_rooms.all()
+        user_messages = user.messages.all()[:5]
+        context = {'user':user, 'topics':Topic.objects.all(), 'rooms':rooms, 'activity':user_messages}
+        return render(request, 'main/profile.html', context)
 
 # class createRoom2(CreateView):
 #     template_name = 'main/room_form.html'
@@ -94,7 +117,9 @@ class createRoom(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         form = RoomForm(request.POST)
         if form.is_valid():
-            form.save()
+            new_room = form.save(commit=False)
+            new_room.host = request.user
+            new_room.save()
             return redirect(reverse('main:home'))
 
 # class updateRoom2(UpdateView):
@@ -135,3 +160,16 @@ class deleteRoom(LoginRequiredMixin, View):
         room.delete()
         return redirect(reverse('main:home'))
 
+class deleteMessage(LoginRequiredMixin, View):
+    template_name = 'main/delete_form.html'
+    def get(self, request, pk):
+        message = get_object_or_404(Message, id=pk)
+        if request.user != message.user and request.user != message.room.host :
+            return HttpResponse(f"You are not allowed to delete '<i>{message}</i>' , it belongs to @{message.user.username}")
+        return render(request, 'main/delete_form.html', {'object':message})
+    def post(self, request, pk):
+        message = get_object_or_404(Message, id=pk)
+        room = message.room
+        room.participants.remove(message.user)
+        message.delete()
+        return redirect(reverse('main:view-room', kwargs = {'room_name':room.name}))
