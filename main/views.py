@@ -12,11 +12,12 @@ from django.http import HttpResponse
 from django.contrib.auth.forms import UserCreationForm
 # Create your views here.
 
+
 class LoginView(View):
     def get(self, request):
         if request.user.is_authenticated:
             return redirect(reverse('main:home'))
-        return render(request, 'main/login_register.html', {'action':'login'})
+        return render(request, 'main/login-register.html', {'action':'login'})
     def post(self, request):
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -41,7 +42,7 @@ class LogoutView(View):
 
 class RegisterView(View):
     def get(self, request):
-        return render(request, 'main/login_register.html', {'action':'register', 'form':UserCreationForm()})
+        return render(request, 'main/login-register.html', {'action':'register', 'form':UserCreationForm()})
     def post(self, request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
@@ -52,6 +53,7 @@ class RegisterView(View):
             return redirect(reverse('main:home'))
         else:
             messages.error(request, 'An error occurred during registration')
+        return self.get(request)
 
 class RoomView(View):
     def get(self, request, room_name):
@@ -74,22 +76,10 @@ class HomeView(View):
     template_name = 'main/home.html'
     def get(self, request):
         q = request.GET.get('q') if request.GET.get('q') else ''
-        rooms = Room.objects.filter(
-            Q(topic__name__icontains = q) | 
-            Q(name__icontains = q) |
-            Q(host__username__icontains = q) |
-            Q(description__icontains = q)
-
-        )
-        room_messages = Message.objects.filter(room__in=rooms)[:5]
-
-        context = {'rooms': rooms, 'activity':room_messages, 'room_count':rooms.count(), 'topics':Topic.objects.all()}
+        rooms = Room.objects.filter(Q(name__icontains=q) | Q(topic__name__icontains=q) | Q(host__username__icontains=q))[:6] 
+        messages = Message.objects.filter(Q(room__in=rooms) | Q(room__topic__name__icontains=q))[:5]
+        context = {'rooms': rooms, 'activity':messages, 'room_count':len(rooms), 'topics':Topic.objects.all()}
         return render(request, 'main/home.html', context)
-
-
-def contact(request):
-    return render(request, 'main/contact.html', {})
-
 
 class UserProfile(View):
     def get(self, request, username):
@@ -99,39 +89,24 @@ class UserProfile(View):
         context = {'user':user, 'topics':Topic.objects.all(), 'rooms':rooms, 'activity':user_messages}
         return render(request, 'main/profile.html', context)
 
-# class createRoom2(CreateView):
-#     template_name = 'main/room_form.html'
-#     form_class = RoomForm
-#     def form_valid(self, form):
-#         print(form.cleaned_data)
-#         return super().form_valid(form)
-#     def get_success_url(self):
-#         return reverse('main:home')
- 
-
-
 class createRoom(LoginRequiredMixin, View):
     def get(self, request):
-        context = {'form':RoomForm()}
-        return render(request, 'main/room_form.html', context)
+        context = {'form':RoomForm(), 'action':'create', 'topics':Topic.objects.all()}
+        return render(request, 'main/create-room.html', context)
     def post(self, request, *args, **kwargs):
-        form = RoomForm(request.POST)
-        if form.is_valid():
-            new_room = form.save(commit=False)
-            new_room.host = request.user
-            new_room.save()
-            return redirect(reverse('main:home'))
-
-# class updateRoom2(UpdateView):
-#     template_name = 'main/room_form.html'
-#     form_class = RoomForm
-#     def form_valid(self, form):
-#         print(form.cleaned_data)
-#         return super().form_valid(form)
-#     def get_object(self):
-#         return get_object_or_404(Room, id = self.kwargs.get('pk'))
-#     def get_success_url(self):
-#         return reverse('main:home')
+        topic, created = Topic.objects.get_or_create(name=request.POST.get('topic'))
+        Room.objects.create(
+            host = request.user,
+            topic=topic,
+            name=request.POST.get('name'),
+            description=request.POST.get('description')
+        )
+        # form = RoomForm(request.POST)
+        # if form.is_valid():
+        #     new_room = form.save(commit=False)
+        #     new_room.host = request.user
+        #     new_room.save()
+        return redirect(reverse('main:home'))
 
 class updateRoom(LoginRequiredMixin, View):
     def get(self, request, pk):
@@ -140,13 +115,16 @@ class updateRoom(LoginRequiredMixin, View):
             return HttpResponse(f"You are not allowed to edit '<i>{room}</i>' , it belongs to @{room.host.username}")
 
         form = RoomForm(instance=room)
-        return render(request, 'main/room_form.html', {'form':form})
+        
+        return render(request, 'main/create-room.html', {'form':form, 'room':room, 'action':'update', 'topics':Topic.objects.all()})
     def post(self, request, pk): 
         room = get_object_or_404(Room, id = self.kwargs.get('pk'))
-        form = RoomForm(request.POST, instance=room)
-        if form.is_valid():
-            form.save()
-            return redirect(reverse('main:home'))
+        topic, created = Topic.objects.get_or_create(name=request.POST.get('topic'))
+        room.topic = topic
+        room.name = request.POST.get('name')
+        room.description = request.POST.get('description')
+        room.save()
+        return redirect(request.META.HTTP_REFERER)
 
 class deleteRoom(LoginRequiredMixin, View):
     template_name = 'main/delete_form.html'
@@ -154,7 +132,7 @@ class deleteRoom(LoginRequiredMixin, View):
         room = get_object_or_404(Room, id=pk)
         if request.user != room.host:
             return HttpResponse(f"You are not allowed to delete '<i>{room}</i>' , it belongs to @{room.host.username}")
-        return render(request, 'main/delete_form.html', {'object':room})
+        return render(request, 'main/delete.html', {'object':room})
     def post(self, request, pk):
         room = get_object_or_404(Room, id=pk)
         room.delete()
@@ -166,10 +144,46 @@ class deleteMessage(LoginRequiredMixin, View):
         message = get_object_or_404(Message, id=pk)
         if request.user != message.user and request.user != message.room.host :
             return HttpResponse(f"You are not allowed to delete '<i>{message}</i>' , it belongs to @{message.user.username}")
-        return render(request, 'main/delete_form.html', {'object':message})
+        return render(request, 'main/delete.html', {'object':message})
     def post(self, request, pk):
         message = get_object_or_404(Message, id=pk)
         room = message.room
         room.participants.remove(message.user)
         message.delete()
         return redirect(reverse('main:view-room', kwargs = {'room_name':room.name}))
+
+class updateUser(LoginRequiredMixin, View):
+    def get(self, request):
+        form = UserForm(instance=request.user)
+        print(form)
+        return render(request, 'main/update-user.html', {'form':form})
+    def post(self, request):
+        form = UserForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+        return redirect(reverse('main:user-profile', kwargs={'username':request.user.username}))
+        
+
+"""
+class createRoom2(CreateView):
+    template_name = 'main/room_form.html'
+    form_class = RoomForm
+    def form_valid(self, form):
+        print(form.cleaned_data)
+        return super().form_valid(form)
+    def get_success_url(self):
+        return reverse('main:home')
+
+class updateRoom2(UpdateView):
+    template_name = 'main/create-room.html'
+    form_class = RoomForm
+    def form_valid(self, form):
+        print(form.cleaned_data)
+        return super().form_valid(form)
+    def get_object(self):
+        return get_object_or_404(Room, id = self.kwargs.get('pk'))
+    def get_success_url(self):
+        return reverse('main:home')
+"""
+
+
