@@ -1,17 +1,16 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import *
+from .models import Topic, Message, Room, User
 from django.views.generic import *
 from .forms import *
 from django.urls import reverse
 from django.db.models import Q
-from django.contrib.auth.models import User
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
-from django.contrib.auth.forms import UserCreationForm
-# Create your views here.
+from django.http import JsonResponse
 
+# Create your views here.
 
 class LoginView(View):
     def get(self, request):
@@ -42,19 +41,21 @@ class LogoutView(View):
 
 class RegisterView(View):
     def get(self, request):
-        return render(request, 'main/login-register.html', {'action':'register', 'form':UserCreationForm()})
+        return render(request, 'main/login-register.html', {'action':'register', 'form':MyUserCreationForm()})
     def post(self, request):
-        form = UserCreationForm(request.POST)
+        print(request.POST)
+        #! always remember to pass in request.FILES when submitting forms that have an Imagefield or any type of filefield
+        # ! attached to them
+        form = MyUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(commit=False)
             # user.username = user.username.lower()
             user.save()
             login(request, user)
-            return redirect(reverse('main:home'))
         else:
-            messages.error(request, 'An error occurred during registration')
-        return self.get(request)
-
+            messages.error(request, 'An error occured during registration')
+        return redirect(reverse('main:home'))
+        
 class RoomView(View):
     def get(self, request, room_name):
         room = Room.objects.get(name=room_name)
@@ -78,7 +79,7 @@ class HomeView(View):
         q = request.GET.get('q') if request.GET.get('q') else ''
         rooms = Room.objects.filter(Q(name__icontains=q) | Q(topic__name__icontains=q) | Q(host__username__icontains=q))[:6] 
         messages = Message.objects.filter(Q(room__in=rooms) | Q(room__topic__name__icontains=q))[:5]
-        context = {'rooms': rooms, 'activity':messages, 'room_count':len(rooms), 'topics':Topic.objects.all()}
+        context = {'rooms': rooms, 'activity':messages, 'room_count':len(rooms), 'topics':Topic.objects.all()[:5]}
         return render(request, 'main/home.html', context)
 
 class UserProfile(View):
@@ -86,13 +87,13 @@ class UserProfile(View):
         user = User.objects.get(username=username)
         rooms = user.owned_rooms.all()
         user_messages = user.messages.all()[:5]
-        context = {'user':user, 'topics':Topic.objects.all(), 'rooms':rooms, 'activity':user_messages}
+        context = {'user':user, 'topics':Topic.objects.all()[:5], 'rooms':rooms, 'activity':user_messages}
         return render(request, 'main/profile.html', context)
 
 class createRoom(LoginRequiredMixin, View):
     def get(self, request):
         context = {'form':RoomForm(), 'action':'create', 'topics':Topic.objects.all()}
-        return render(request, 'main/create-room.html', context)
+        return render(request, 'main/cr_ud-room.html', context)
     def post(self, request, *args, **kwargs):
         topic, created = Topic.objects.get_or_create(name=request.POST.get('topic'))
         Room.objects.create(
@@ -116,7 +117,7 @@ class updateRoom(LoginRequiredMixin, View):
 
         form = RoomForm(instance=room)
         
-        return render(request, 'main/create-room.html', {'form':form, 'room':room, 'action':'update', 'topics':Topic.objects.all()})
+        return render(request, 'main/cr_ud-room.html', {'form':form, 'room':room, 'action':'update', 'topics':Topic.objects.all()})
     def post(self, request, pk): 
         room = get_object_or_404(Room, id = self.kwargs.get('pk'))
         topic, created = Topic.objects.get_or_create(name=request.POST.get('topic'))
@@ -124,7 +125,7 @@ class updateRoom(LoginRequiredMixin, View):
         room.name = request.POST.get('name')
         room.description = request.POST.get('description')
         room.save()
-        return redirect(request.META.HTTP_REFERER)
+        return redirect('main:view-room', room.name)
 
 class deleteRoom(LoginRequiredMixin, View):
     template_name = 'main/delete_form.html'
@@ -148,21 +149,35 @@ class deleteMessage(LoginRequiredMixin, View):
     def post(self, request, pk):
         message = get_object_or_404(Message, id=pk)
         room = message.room
-        room.participants.remove(message.user)
+        if not room.messages.filter(user=message.user):
+            room.participants.remove(message.user) 
         message.delete()
         return redirect(reverse('main:view-room', kwargs = {'room_name':room.name}))
 
 class updateUser(LoginRequiredMixin, View):
     def get(self, request):
-        form = UserForm(instance=request.user)
+        form = MyUserUpdateForm(instance=request.user)
         print(form)
         return render(request, 'main/update-user.html', {'form':form})
     def post(self, request):
-        form = UserForm(request.POST, instance=request.user)
+        form = MyUserUpdateForm(request.POST, request.FILES, instance=request.user)
+        print(form)
         if form.is_valid():
             form.save()
         return redirect(reverse('main:user-profile', kwargs={'username':request.user.username}))
         
+class TopicsView(View):
+    def get(self, request):
+        q = request.GET.get('q') if request.GET.get('q') else ''
+        topics = Topic.objects.filter(Q(name__icontains=q))
+        return render(request, 'main/topics.html', {'topics':topics})
+
+class ActivityView(View):
+    def get(self, request):
+        q = request.GET.get('q') if request.GET.get('q') else ''
+        rooms = Room.objects.filter(Q(name__icontains=q) | Q(topic__name__icontains=q) | Q(host__username__icontains=q))[:6] 
+        activity = Message.objects.filter(Q(room__in=rooms) | Q(room__topic__name__icontains=q))[:5]
+        return render(request, 'main/activity.html', {'activity':activity})
 
 """
 class createRoom2(CreateView):
@@ -185,5 +200,3 @@ class updateRoom2(UpdateView):
     def get_success_url(self):
         return reverse('main:home')
 """
-
-

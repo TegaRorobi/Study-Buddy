@@ -8,7 +8,7 @@
             {% if activity %}
             <a href="{% url 'main:user-profile' message.user.username %}" class="roomListRoom__author">
                 <div class="avatar avatar--small">
-                <img src="https://randomuser.me/api/portraits/women/11.jpg" />
+                <img src="{{message.user.image.url}}" />
                 </div>
                 <p>
                 @{{message.user.username}}

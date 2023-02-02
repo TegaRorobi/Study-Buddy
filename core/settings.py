@@ -38,11 +38,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'main.apps.MainConfig',
-    'crispy_forms',
+    # 'crispy_forms',
+
+    'rest_framework',
+    "corsheaders",
+    'debug_toolbar',
 ]
 
+AUTH_USER_MODEL = 'main.User'
+
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -51,6 +60,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+INTERNAL_IPS = [
+    # ...
+    "127.0.0.1",
+    # ...
+]
+
 
 ROOT_URLCONF = 'core.urls'
 
@@ -119,11 +135,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
@@ -132,3 +150,8 @@ LOGIN_URL = '/login'
 LOGOUT_URL = '/logout'
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'main', 'static')]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+
+MEDIA_ROOT =  os.path.join(BASE_DIR, 'media')

@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
-
+from django.conf import settings
+from django.conf.urls.static import static
 
 app_name='main'
 urlpatterns = [
@@ -16,5 +17,8 @@ urlpatterns = [
     path('delete-message/<int:pk>/', deleteMessage.as_view(), name = 'delete-message'),
     path('profile/<str:username>/', UserProfile.as_view(), name = 'user-profile'), 
     path('update-profile/', updateUser.as_view(), name='update-profile'),
+    path('topics/', TopicsView.as_view(), name='topics'),
+    path('activity/', ActivityView.as_view(), name='activity'),
+    # path('search/', search_results, name='ajax-search'),
 ]
 
